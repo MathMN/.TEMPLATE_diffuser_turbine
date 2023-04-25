@@ -1,0 +1,96 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2112                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Looking at the block from the top down. The turbine is looked from the top down (set view direction -Z in paraview)
+// Flow in the x direction. Gravity points to -z.
+// x:x1, y:x2, z:x3
+// University of Brasilia
+// Matheus Montenegro Nunes
+
+#include        "geometryInfo"
+
+scale   1;
+
+// Domain
+xMin #eval "-  5.0 * $diameter";
+yMin #eval "-  5.0 * $diameter";
+zMin #eval "-  5.0 * $diameter";
+
+xMax #eval "  15.0 * $diameter";
+yMax #eval "   5.0 * $diameter";
+zMax #eval "   5.0 * $diameter";
+
+// Number of cells
+cellSize #eval "0.25 * $diameter";
+xCells   #eval "((-1*$xMin)+$xMax)/$cellSize";
+yCells   #eval "((-1*$yMin)+$yMax)/$cellSize";
+zCells   #eval "((-1*$zMin)+$zMax)/$cellSize";
+
+vertices
+(
+    ($xMin $yMin $zMin)
+    ($xMax $yMin $zMin)
+    ($xMax $yMax $zMin)
+    ($xMin $yMax $zMin)
+    ($xMin $yMin $zMax)
+    ($xMax $yMin $zMax)
+    ($xMax $yMax $zMax)
+    ($xMin $yMax $zMax)
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) ($xCells $yCells $zCells) simpleGrading (1 1 1) 
+);
+
+edges
+(
+);
+
+boundary
+(
+    walls
+    {
+        type wall;
+        faces
+        (
+            (3 7 6 2)
+            (1 5 4 0)
+            (4 5 6 7)
+            (0 3 2 1)
+        );
+    }
+
+    inlet
+    {
+        type patch;
+        faces
+        (
+            (0 4 7 3)
+        );
+    }
+
+    outlet
+    {
+        type patch;
+        faces
+        (
+            (2 6 5 1)
+        );
+    }
+);
+
+// ************************************************************************* //

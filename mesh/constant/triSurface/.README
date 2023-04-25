@@ -1,0 +1,10 @@
+The rotor should be prefixed by turbine_rotor as
+turbine_rotor_HK22cm.obj
+
+The rotating domain is called an arbitrary mesh interface (AMI),
+AMI.obj
+
+The rest of the turbine components should be included with the prefix turbine_comp as
+turbine_comp_stator.obj
+turbine_comp_diffuser.obj
+turbine_comp_tower.obj

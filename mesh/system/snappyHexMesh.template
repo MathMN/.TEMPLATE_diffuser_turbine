@@ -1,0 +1,20 @@
+#!/bin/bash
+cd "${0%/*}" || exit                                # Run from this directory
+#------------------------------------------------------------------------------
+
+rm snappyHexMesh.surfaces 2>/dev/null
+find ../constant/triSurface/ -name "*.obj*" -type f -printf "%f\n" | sed 's=\.gz==' | while read file; do
+    if [[ "$file" == "AMI.obj" ]]; then
+        echo "$file{ type triSurfaceMesh; name AMI; }" >> snappyHexMesh.surfaces
+    else
+        echo "$file{ type triSurfaceMesh; }" >> snappyHexMesh.surfaces
+    fi
+done
+
+rm snappyHexMesh.features 2>/dev/null
+
+find ../constant/triSurface/ -name "*.eMesh*" -type f -printf "%f\n" | sed 's=\.gz==' | while read file; do
+    echo "{ file $file; level \$high; }" >> snappyHexMesh.features
+done
+
+
