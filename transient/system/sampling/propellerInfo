@@ -9,6 +9,7 @@
 #include "../geometryInfo"
 
 sample_origin #eval "0.1 * $diameter";
+rotating_speed_rps #eval "$rotating_speed / 60";
 
 turbineInfo
 {
@@ -35,16 +36,16 @@ turbineInfo
     // Radius
     radius          $radius;
 
-    rotationMode    MRF;
+    rotationMode    specified;
 
     //// rotationMode = mrf
-    MRF             rotatingZone;
+    //MRF             rotatingZone;
     //// (origin, n and axis retrieved from MRF model)
 
     // rotationMode = specified:
-    //origin          ($sample_origin 0 0);
-    //n               16.66;
-    //axis            (-1 0 0);
+    origin          (0 0 0);
+    n               $rotating_speed_rps;
+    axis            (-1 0 0);
 
     // Optionally write wake text files
     // Note: controlled by writeControl

@@ -1,3 +1,0 @@
-turbine_rotor_HK_NoPrandtl.obj{ type triSurfaceMesh; }
-AMI.obj{ type triSurfaceMesh; name AMI; }
-turbine_comp_diffuser_S1223.obj{ type triSurfaceMesh; }

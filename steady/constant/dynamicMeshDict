@@ -14,6 +14,10 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+#include "../system/geometryInfo"
+
+rotating_speed_rads = "$rotating_speed / (60 * 2 * pi())"
+
 dynamicFvMesh   dynamicMotionSolverFvMesh;
 
 motionSolverLibs (fvMotionSolvers);
@@ -26,7 +30,7 @@ solidBodyMotionFunction  rotatingMotion;
 
     origin      ( 0 0 0);
     axis        (-1 0 0);
-    omega       104.72; // rad/s
+    omega       rotating_speed_rads; // rad/s
 
 
 

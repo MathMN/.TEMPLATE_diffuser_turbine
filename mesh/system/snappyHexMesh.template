@@ -14,7 +14,14 @@ done
 rm snappyHexMesh.features 2>/dev/null
 
 find ../constant/triSurface/ -name "*.eMesh*" -type f -printf "%f\n" | sed 's=\.gz==' | while read file; do
-    echo "{ file $file; level \$high; }" >> snappyHexMesh.features
+    if [[ "$file" == "AMI.eMesh" ]]; then
+        :
+    elif [[ "$file" == turbine_rotor* ]]; then
+        echo "{ file $file; level \$high; }" >> snappyHexMesh.features
+        echo "{ file $file; levels ((\$edge \$highest)); }" >> snappyHexMesh.features
+    else
+        echo "{ file $file; level \$high; }" >> snappyHexMesh.features
+    fi
 done
 
 

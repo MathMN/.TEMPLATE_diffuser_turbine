@@ -19,13 +19,23 @@ FoamFile
 // Which of the steps to run
 castellatedMesh true;
 snap            true;
-addLayers       false;
+addLayers       true;
 
 // Rotating domain
 
 p1X  #eval "- 0.40 * $diameter";
 p2X  #eval "  0.40 * $diameter";
 rotatingDomainRadius  #eval "  0.52 * $diameter";
+
+// Refinement box turbine
+
+xMin_turbine #eval "-0.25 * $diameter";
+yMin_turbine #eval "-0.65 * $diameter";
+zMin_turbine #eval "-0.65 * $diameter";
+
+xMax_turbine #eval " 0.25 * $diameter";
+yMax_turbine #eval " 0.65 * $diameter";
+zMax_turbine #eval " 0.65 * $diameter";
 
 // Refinement box near wake
 
@@ -48,10 +58,13 @@ yMax_far_wake #eval "  1.2 * $diameter";
 zMax_far_wake #eval "  1.2 * $diameter";
 
 // Levels for testing
-high 7;    // Surfaces
-med 4;     // Near wake
-low 2;     // Far wake
-lowest 1;
+edge #eval "0.0225 * $diameter";
+
+highest 7; // Surface edges
+high 6;    // Surfaces
+med 5;     // AMI
+low 4;     // Near wake
+lowest 2;  // Far wake
 
 
 // Geometry. Definition of all surfaces. All surfaces are of class
@@ -64,6 +77,12 @@ geometry
 {
     #include "snappyHexMesh.surfaces"
 
+    refinementBox_turbine
+    {
+        type    searchableBox;
+        min     ($xMin_turbine $yMin_turbine $zMin_turbine);
+        max     ($xMax_turbine $yMax_turbine $zMax_turbine);
+    }
     refinementBox_near_wake
     {
         type    searchableBox;
@@ -87,7 +106,7 @@ castellatedMeshControls
     // Refinement parameters
     // ~~~~~~~~~~~~~~~~~~~~~
 
-    // If local number of cells is >= maxLoevalells on any processor
+    // If local number of cells is >= maxLocalCells on any processor
     // switches from from refinement followed by balancing
     // (current method) to (weighted) balancing before refinement.
     maxLocalCells 1000000;
@@ -97,12 +116,15 @@ castellatedMeshControls
     // Note that this is the number of cells before removing the part which
     // is not 'visible' from the keepPoint. The final number of cells might
     // actually be a lot less.
-    maxGlobalCells 20000000;
+    maxGlobalCells 18000000;
 
-    // The surface refinement loop might spend lots of iterations refining just a
-    // few cells. This setting will cause refinement to stop if <= minimumRefine
-    // are selected for refinement. Note: it will at least do one iteration
-    // (unless the number of cells to refine is 0)
+    // The surface refinement loop might spend lots of iterations refining just
+    // a few cells. This setting will cause refinement to stop if
+    // <= minRefinementCells cells are selected for refinement. Note: it will
+    // at least do one iteration unless
+    //  a: the number of cells to refine is 0
+    //  b: minRefinementCells = -1. This is a special value indicating
+    //     no refinement.
     minRefinementCells 0;
 
     // Allow a certain level of imbalance during refining
@@ -115,7 +137,7 @@ castellatedMeshControls
     // Number of buffer layers between different levels.
     // 1 means normal 2:1 refinement restriction, larger means slower
     // refinement.
-    nCellsBetweenLevels 3;
+    nCellsBetweenLevels 5;
 
 
 
@@ -142,16 +164,19 @@ castellatedMeshControls
 
     refinementSurfaces
     {
-        "turbine.*"{level ($high $high);}
+        "turbine_rotor.*"{level ($high $high); }
+        "turbine_comp.*"{level ($high $high); }
         AMI
         {
-            level ($low $low); // Note: better: levels 3 3
+            level (0 0);
             faceType boundary;
             cellZone rotatingZone;
             faceZone rotatingZone;
             cellZoneInside inside;
         }
     }
+
+    gapLevel    (4 0 $highest);
 
     // Resolve sharp angles
     resolveFeatureAngle 30;
@@ -164,7 +189,7 @@ castellatedMeshControls
     // three modes
     // - distance. 'levels' specifies per distance to the surface the
     //   wanted refinement level. The distances need to be specified in
-    //   descending order.
+    //   increasing order.
     // - inside. 'levels' is only one entry and only the level is used. All
     //   cells inside the surface get refined up to the level. The surface
     //   needs to be closed for this to be possible.
@@ -172,16 +197,22 @@ castellatedMeshControls
 
     refinementRegions
     {
-        refinementBox_near_wake
+        refinementBox_turbine
         {
             mode inside;
             levels ((1e15 $med));
         }
 
-        refinementBox_far_wake
+        refinementBox_near_wake
         {
             mode inside;
             levels ((1e15 $low));
+        }
+
+        refinementBox_far_wake
+        {
+            mode inside;
+            levels ((1e15 $lowest));
         }
     }
 
@@ -218,7 +249,7 @@ snapControls
     tolerance 4.0; // 1.0;
 
     //- Number of mesh displacement relaxation iterations.
-    nSolveIter 300;
+    nSolveIter 30;
 
     //- Maximum number of snapping relaxation iterations. Should stop
     //  before upon reaching a correct mesh.
@@ -235,7 +266,7 @@ snapControls
         implicitFeatureSnap true;
 
         // Use castellatedMeshControls::features (default = true)
-        explicitFeatureSnap false;
+        explicitFeatureSnap true;
 
         // Detect features between multiple surfaces
         // (only for explicitFeatureSnap, default = false)
@@ -249,30 +280,30 @@ addLayersControls
 {
     // Are the thickness parameters below relative to the undistorted
     // size of the refined cell outside layer (true) or absolute sizes (false).
-    relativeSizes true;
+    relativeSizes false;
 
     // Per final patch (so not geometry!) the layer information
     layers
     {
-        turbine
+        "turbine.*"
         {
-            nSurfaceLayers 5;
+            nSurfaceLayers 10;
         }
     }
 
     // Expansion factor for layer mesh
-    expansionRatio 1.2;
+    expansionRatio 1.3;
 
     // Wanted thickness of final added cell layer. If multiple layers
     // is the thickness of the layer furthest away from the wall.
     // Relative to undistorted size of cell outside layer.
     // See relativeSizes parameter.
-    finalLayerThickness 0.3;
+    firstLayerThickness 2e-5;
 
     // Minimum thickness of cell layer. If for any reason layer
     // cannot be above minThickness do not add layer.
     // Relative to undistorted size of cell outside layer.
-    minThickness 0.1;
+    minThickness 1e-5;
 
     // If points get not extruded do nGrow layers of connected faces that are
     // also not grown. This helps convergence of the layer addition process
@@ -282,43 +313,103 @@ addLayersControls
 
     // Advanced settings
 
-    // When not to extrude surface. 0 is flat surface, 90 is when two faces
-    // are perpendicular
-    featureAngle 30;
+    // Static analysis of starting mesh
 
-    // Maximum number of snapping relaxation iterations. Should stop
-    // before upon reaching a correct mesh.
-    nRelaxIter 3;
+        // When not to extrude surface. 0 is flat surface, 90 is when two faces
+        // are perpendicular. Note: was not working correctly < 1806
+        featureAngle 65;
 
-    // Number of smoothing iterations of surface normals
-    nSmoothSurfaceNormals 1;
+        // When to merge patch faces. Default is featureAngle. Useful when
+        // featureAngle is large.
+        //mergePatchFacesAngle 45;
 
-    // Number of smoothing iterations of interior mesh movement direction
-    nSmoothNormals 3;
+        // Stop layer growth on highly warped cells
+        maxFaceThicknessRatio 1000;//0.5;
 
-    // Smooth layer thickness over surface patches
-    nSmoothThickness 10;
+    // Patch displacement
 
-    // Stop layer growth on highly warped cells
-    maxFaceThicknessRatio 0.5;
+        // Number of smoothing iterations of surface normals
+        nSmoothSurfaceNormals 10;
 
-    // Reduce layer growth where ratio thickness to medial
-    // distance is large
-    maxThicknessToMedialRatio 0.3;
+        // Smooth layer thickness over surface patches
+        nSmoothThickness 10;
 
-    // Angle used to pick up medial axis points
-    // Note: changed(corrected) w.r.t 17x! 90 degrees corresponds to 130 in 17x.
-    minMedialAxisAngle 90;
+    // Medial axis analysis (for use with default displacementMedialAxis)
+
+        // Angle used to pick up medial axis points
+        // Note: changed(corrected) w.r.t 1.7.x! 90 degrees corresponds to 130
+        // in 1.7.x.
+        minMedialAxisAngle 90;
+
+        // Reduce layer growth where ratio thickness to medial
+        // distance is large
+        maxThicknessToMedialRatio 0.3;
+
+        // Number of smoothing iterations of interior mesh movement direction
+        nSmoothNormals 15;
+
+        // Optional: limit the number of steps walking away from the surface.
+        // Default is unlimited.
+        //nMedialAxisIter 10;
+
+        // Optional: smooth displacement after medial axis determination.
+        // default is 0.
+        //nSmoothDisplacement 90;
+
+        // (wip)Optional: do not extrude any point where
+        //   (false) : all surrounding faces are not fully extruded
+        //   (true)  : all surrounding points are not extruded
+        // Default is false.
+        detectExtrusionIsland true;
+
+        // Optional: do not extrude around sharp edges if both faces are not
+        // fully extruded i.e. if one of the faces on either side would
+        // become a wedge.
+        // Default is 0.5*featureAngle. Set to -180 always attempt extrusion
+        layerTerminationAngle 25;
+
+        // Optional: disable shrinking of edges that have one (or two) points
+        // on an extruded patch.
+        // Default is false to enable single/two cell thick channels to still
+        // have layers. In <=1806 this was true by default. On larger gaps it
+        // should have no effect.
+        //disableWallEdges true;
+
+        // Optional: at non-patched sides allow mesh to slip if extrusion
+        // direction makes angle larger than slipFeatureAngle. Default is
+        // 0.5*featureAngle.
+        // slipFeatureAngle 130;
+
+        // Maximum number of snapping relaxation iterations. Should stop
+        // before upon reaching a correct mesh.
+        nRelaxIter 25;
+
+        // Stop layer growth on highly warped cells
+        //maxFaceThicknessRatio 0.5;
 
 
-    // Create buffer region for new layer terminations
-    nBufferCellsNoExtrude 0;
+    // Mesh shrinking
 
+        // Create buffer region for new layer terminations, i.e. gradually
+        // step down number of layers. Set to <0 to terminate layer in one go.
+        nBufferCellsNoExtrude 0;
 
-    // Overall max number of layer addition iterations. The mesher will exit
-    // if it reaches this number of iterations; possibly with an illegal
-    // mesh.
-    nLayerIter 50;
+        // Overall max number of layer addition iterations. The mesher will
+        // exit if it reaches this number of iterations; possibly with an
+        // illegal mesh.
+        nLayerIter 50;
+
+        // Max number of iterations after which relaxed meshQuality controls
+        // get used. Up to nRelaxedIter it uses the settings in
+        // meshQualityControls,
+        // after nRelaxedIter it uses the values in
+        // meshQualityControls::relaxed.
+        nRelaxedIter 0;
+
+        // Additional reporting: if there are just a few faces where there
+        // are mesh errors (after adding the layers) print their face centres.
+        // This helps in tracking down problematic mesh areas.
+        //additionalReporting true;
 }
 
 
@@ -352,11 +443,11 @@ meshQualityControls
     //     <0 = inside out tet,
     //      0 = flat tet
     //      1 = regular tet
-    minTetQuality -1; // 1e-30;
+    minTetQuality  -1; // 1e-30;
     minArea -1;
     //- Minimum face twist. Set to <-1 to disable. dot product of face normal
     //  and face centre triangles normal
-    minTwist 0.01;
+    minTwist 0.02;
 
     //- Minimum normalised cell determinant
     //  1 = hex, <= 0 = folded or flattened illegal cell
@@ -367,7 +458,12 @@ meshQualityControls
 
     //- minVolRatio (0 -> 1)
     minVolRatio 0.01;
+
+    //- Per triangle normal compared to that of preceding triangle. Must be >0
+    //  for Fluent compatibility
     minTriangleTwist -1;
+
+
     // Advanced
 
     //- Number of error distribution iterations
@@ -382,10 +478,26 @@ meshQualityControls
     {
         //- Maximum non-orthogonality allowed. Set to 180 to disable.
         maxNonOrtho 75;
+        maxBoundarySkewness 20;
+        maxInternalSkewness 4;
+        maxConcave 80;
+        minVol 1e-13;
+        minTetQuality -1; // 1e-30;
+        minArea -1;
+        minTwist 0.02;
+        minDeterminant 0.001;
+        minFaceWeight 0.05;
+        minVolRatio 0.01;
+        minTriangleTwist -1;
     }
 }
 
-
+writeFlags
+(
+    scalarLevels
+    layerSets
+    layerFields     // write volScalarField for layer coverage
+);
 
 // Merge tolerance. Is fraction of overall bounding box of initial mesh.
 // Note: the write tolerance needs to be higher than this.

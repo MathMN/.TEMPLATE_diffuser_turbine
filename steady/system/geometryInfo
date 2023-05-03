@@ -10,14 +10,9 @@
 
 // Geometry
 
-diameter    0.22000;
-radius      0.11000;
-turbine_obj        "turbine_HK_NoPrandtl.obj";
-turbine_eMesh      "turbine_HK_NoPrandtl.eMesh";
-diffuser_obj       "diffuser_S1223.obj";
-diffuser_eMesh     "diffuser_S1223.eMesh";
-rotating_obj       "rotatingDomain_22cm.obj";
-rotating_eMesh     "rotatingDomain_22cm.eMesh";
+diameter      0.22000; // m
+radius        0.11000; // m
+rotating_speed   1000; // rpm
 
 
 // ************************************************************************* //

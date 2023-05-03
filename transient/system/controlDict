@@ -24,9 +24,9 @@ stopAt            endTime;
 
 endTime           0.3;
 
-deltaT            1e-6;
+deltaT            1e-5;
 
-writeControl      adjustable;
+writeControl      adjustableRunTime;
 
 writeInterval     1e-3;
 
@@ -46,7 +46,7 @@ runTimeModifiable yes;
 
 adjustTimeStep    yes;
 
-maxCo             2;
+maxCo             1e2; // meanCo < 1
 
 functions
 {

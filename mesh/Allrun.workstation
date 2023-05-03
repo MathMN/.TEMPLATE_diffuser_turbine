@@ -1,0 +1,31 @@
+#!/bin/bash
+cd "${0%/*}" || exit                                # Run from this directory
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions        # Tutorial run functions
+#------------------------------------------------------------------------------
+
+touch turbine_mesh.foam
+
+# - Mesh in parallel
+nProc=$(getNumberOfProcessors)
+
+./system/surfaceFeatureExtract.template
+
+runApplication surfaceFeatureExtract
+
+runApplication blockMesh
+
+runApplication decomposePar
+
+./system/snappyHexMesh.template
+
+runParallel snappyHexMesh -overwrite
+
+# renumber the mesh
+runParallel renumberMesh -overwrite
+
+# - create the inlet/outlet and AMI patches
+runParallel createPatch -overwrite
+
+runApplication reconstructParMesh -constant
+
+#------------------------------------------------------------------------------
